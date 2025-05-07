@@ -1,24 +1,21 @@
-import logo from './logo.svg';
-import './App.css';
+import "./App.css";
+import About from "./components/About";
+import Creative from "./components/Creative";
+import Home from "./components/Home";
+import Nav from "./components/Nav";
+import Educations from "./components/Educations"; // ✅ 添加 Educations 组件的导入
+import Work from "./components/Work";
 
 function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <>
+      <Nav />
+      <Home />
+      <About />
+      <Creative />
+      <Educations />
+      <Work />
+    </>
   );
 }
 
