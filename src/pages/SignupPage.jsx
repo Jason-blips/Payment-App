@@ -1,38 +1,189 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import styled, { keyframes } from 'styled-components';
-import { FaUser, FaLock, FaSpinner, FaChevronDown } from 'react-icons/fa';
+import { FaSpinner, FaChevronDown, FaEnvelope, FaCheck, FaLock, FaPhone } from 'react-icons/fa';
+import Slider from 'rc-slider';
+import 'rc-slider/assets/index.css';
+import axios from 'axios';
 
-
-// 国家区号数据
+// ========== 常量数据 ==========
 const countryCode = [
-  {code: '+86', name: 'China', flag: 'CN'},
-  {code: '+1', name: 'the United States', flag: 'US'},
-  {code: '+44', name: 'the United Kingdom', flag: 'GB'},
-  {code: '+81', name: 'Japan', flag: 'JP'},
-  {code: '+82', name: 'Korea', flag: 'KR'},
-  {code: '+33', name: 'France', flag: 'FR'},
+  { code: '+86', name: 'China', flag: 'CN' },
+  { code: '+1', name: 'the United States', flag: 'US' },
+  { code: '+44', name: 'the United Kingdom', flag: 'GB' },
+  { code: '+81', name: 'Japan', flag: 'JP' },
+  { code: '+82', name: 'Korea', flag: 'KR' },
+  { code: '+33', name: 'France', flag: 'FR' },
 ];
 
-
-const getFlagEmoji = (countryCode) => {
-  return countryCode
-    .toUpperCase()
-    .replace(/./g, char => String.fromCodePoint(char.charCodeAt() + 127397));
+const REGISTER_STEPS = {
+  PHONE_VERIFICATION: 1,
+  EMAIL_VERIFICATION: 2,
+  HUMAN_VERIFICATION: 3,
+  PASSWORD_SETUP: 4
 };
 
-// 动画定义
-const CountrySelect = styled.div`
-  position: relative;
-  display: inline-block;
-  width: 100px;
-  margin-right: 10px;
+// 全局标语样式
+const GlobalBanner = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 15px;
+  text-align: center;
+  font-size: 20px;
+  font-weight: bold;
+  z-index: 1000;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
 `;
 
-const CountryDropDown = styled.div`
+
+// ========== API配置 ==========
+const API_BASE_URL = 'https://your-api-endpoint.com/api';
+const API = {
+  sendEmailCode: (email) => axios.post(`${API_BASE_URL}/send-email-code`, { email }),
+  verifyEmailCode: (email, code) => axios.post(`${API_BASE_URL}/verify-email-code`, { email, code }),
+  register: (data) => axios.post(`${API_BASE_URL}/register`, data)
+};
+
+// ========== 样式组件 ==========
+const fadeIn = keyframes`
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
+`;
+
+const Container = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 20px;
+`;
+
+const RegisterCard = styled.div`
+  background: white;
+  border-radius: 15px;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+  width: 100%;
+  max-width: 450px;
+  padding: 30px;
+  animation: ${fadeIn} 0.6s ease-out;
+  overflow: hidden;
+`;
+
+const Title = styled.h2`
+  color: #333;
+  text-align: center;
+  margin-bottom: 25px;
+  font-size: 24px;
+`;
+
+const FormGroup = styled.div`
+  margin-bottom: 20px;
+`;
+
+const InputContainer = styled.div`
+  position: relative;
+  margin-top: 8px;
+  width: 100%;
+`;
+
+const InputIcon = styled.span`
+  position: absolute;
+  left: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #999;
+`;
+
+const Input = styled.input`
+  width: 100%;
+  padding: 15px 15px 15px 45px;
+  border: 2px solid #eee;
+  border-radius: 8px;
+  font-size: 16px;
+  transition: all 0.3s;
+  box-sizing: border-box;
+  
+  &:focus {
+    border-color: #667eea;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+  }
+`;
+
+const Button = styled.button`
+  width: 100%;
+  padding: 15px;
+  background: linear-gradient(to right, #667eea, #764ba2);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  margin-top: 20px;
+  margin-bottom: 10px;
+  
+  &:hover {
+    background: linear-gradient(to right, #5a6fd1, #6a4299);
+    transform: translateY(-2px);
+  }
+  
+  &:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+    transform: none;
+  }
+`;
+
+const Message = styled.p`
+  font-size: 14px;
+  margin-top: 5px;
+  min-height: 20px;
+`;
+
+const ErrorMessage = styled(Message)`
+  color: #e74c3c;
+`;
+
+const SuccessMessage = styled(Message)`
+  color: #2ecc71;
+`;
+
+const VerificationCodeContainer = styled.div`
+  display: flex;
+  gap: 10px;
+  width: 100%;
+`;
+
+const VerificationCodeButton = styled.button`
+  padding: 10px 15px;
+  background: ${props => props.disabled ? '#ccc' : '#667eea'};
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
+  white-space: nowrap;
+  min-width: 100px;
+`;
+
+const CountrySelectWrapper = styled.div`
+  position: relative;
+  margin-right: 10px;
+  min-width: 120px;
+`;
+
+const CountryDropdown = styled.div`
   position: absolute;
   top: 100%;
   left: 0;
-  width: 200px;
+  width: 100%;
   max-height: 300px;
   overflow-y: auto;
   background: white;
@@ -47,396 +198,489 @@ const CountryOption = styled.div`
   cursor: pointer;
   display: flex;
   align-items: center;
-
-  &:hover {
   
-  background-color: #f5f5f5;
+  &:hover {
+    background-color: #f5f5f5;
   }
 `;
 
-const SelectedCountry = styled.button`
-  display: flex;
-  align-items: center;
-  padding: 10px 15px;
-  border: 2px solid #eee;
+const SliderContainer = styled.div`
+  padding: 20px;
+  margin: 20px 0;
+  background: #f9f9f9;
   border-radius: 8px;
-  cursor: pointer;
-  background: white;
+  text-align: center;
+`;
+
+const Checkmark = styled.div`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #2ecc71;
+  color: white;
+  margin-left: 10px;
 `;
 
 const PhoneInputContainer = styled.div`
   display: flex;
   width: 100%;
-  align-items: center;
 `;
 
-// ========================================================
-const fadeIn = keyframes`
-  from { opacity: 0; transform: translateY(-20px); }
-  to { opacity: 1; transform: translateY(0); }
-`;
+// ========== 主组件 ==========
+function SignUpPage() {
+  const navigate = useNavigate();
+  const [step, setStep] = useState(REGISTER_STEPS.PHONE_VERIFICATION);
+  const [formData, setFormData] = useState({
+    phone: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    verificationCode: '',
+    countryCode: '+86'
+  });
+  const [codes, setCodes] = useState({
+    phoneCode: '',
+    emailCode: ''
+  });
+  const [sliderValue, setSliderValue] = useState(0);
+  const [uiState, setUiState] = useState({
+    error: '',
+    success: '',
+    isLoading: false,
+    countdown: 0,
+    showCountryDropdown: false
+  });
 
-// 样式组件
-const Container = styled.div`
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 20px;
-`;
-
-const LoginCard = styled.div`
-  background: white;
-  border-radius: 15px;
-  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
-  width: 100%;
-  max-width: 400px;
-  padding: 40px;
-  animation: ${fadeIn} 0.6s ease-out;
-`;
-
-const Title = styled.h2`
-  color: #333;
-  text-align: center;
-  margin-bottom: 25px;
-  font-size: 24px;
-
-  @media (max-width: 480px) {
-    font-size: 20px;
-    margin-bottom: 20px;
-  }
-`;
-
-const FormGroup = styled.div`
-  margin-bottom: 15px;
-  position: relative;
-  width: 100%;
-`;
-
-const Input = styled.input`
-  width: calc(100% - 60px);
-  padding: 15px 15px 15px 45px;
-  border: 2px solid #eee;
-  border-radius: 8px;
-  font-size: 16px;
-  transition: all 0.3s;
-  box-sizing: border-box;
-  
-  &:focus {
-    border-color: #667eea;
-    outline: none;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
-  }
-  @media (max-width: 480px) {
-    padding: 12px 12px 12px 40px;
-    font-size: 14px;
-  }
-`;
-
-const PhoneNumberInput = styled(Input)`
-  flex: 1;
-  width: auto;
-  padding-left: 15px;
-`;
-
-const Icon = styled.span`
-  position: absolute;
-  left: 15px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #999;
-`;
-
-const Button = styled.button`
-  width: 100%;
-  padding: 15px;
-  background: linear-gradient(to right, #667eea, #764ba2);
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  
-  &:hover {
-    background: linear-gradient(to right, #5a6fd1, #6a4299);
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-  }
-  
-  &:disabled {
-    background: #ccc;
-    cursor: not-allowed;
-    transform: none;
-  }
-`;
-
-const ErrorMessage = styled.p`
-  color: #e74c3c;
-  font-size: 14px;
-  margin-top: 5px;
-`;
-
-const LoadingSpinner = styled(FaSpinner)`
-  animation: spin 1s linear infinite;
-  margin-right: 10px;
-  
-  @keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-  }
-`;
-
-const ForgotPassword = styled.a`
-  display: block;
-  text-align: right;
-  color: #667eea;
-  font-size: 14px;
-  margin-top: 10px;
-  text-decoration: none;
-  
-  &:hover {
-    text-decoration: underline;
-  }
-`;
-
-const Divider = styled.div`
-  display: flex;
-  align-items: center;
-  margin: 20px 0;
-  
-  &::before, &::after {
-    content: "";
-    flex: 1;
-    border-bottom: 1px solid #eee;
-  }
-  
-  span {
-    padding: 0 10px;
-    color: #999;
-    font-size: 14px;
-  }
-`;
-
-const SocialButton = styled.button`
-  width: 100%;
-  padding: 12px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  background: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s;
-  margin-bottom: 10px;
-  
-  &:hover {
-    background: #f9f9f9;
-  }
-`;
-
-const GoogleIcon = styled.span`
-  display: inline-block;
-  width: 20px;
-  height: 20px;
-  margin-right: 10px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cpath fill='%23EA4335' d='M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z'/%3E%3Cpath fill='%234285F4' d='M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z'/%3E%3Cpath fill='%23FBBC05' d='M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z'/%3E%3Cpath fill='%2342B350' d='M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z'/%3E%3Cpath fill='none' d='M0 0h48v48H0z'/%3E%3C/svg%3E");
-  background-size: contain;
-`;
-
-const FacebookIcon = styled.span`
-  display: inline-block;
-  width: 20px;
-  height: 20px;
-  margin-right: 10px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cpath fill='%231877F2' d='M48 24C48 10.745 37.255 0 24 0S0 10.745 0 24c0 11.979 8.776 21.908 20.25 23.708v-16.77h-6.094V24h6.094v-5.288c0-6.014 3.583-9.337 9.065-9.337 2.626 0 5.372.469 5.372.469v5.906h-3.026c-2.981 0-3.911 1.85-3.911 3.748V24h6.656l-1.064 6.938H27.75v16.77C39.224 45.908 48 35.979 48 24z'/%3E%3C/svg%3E");
-  background-size: contain;
-`;
-
-const SignUpText = styled.p`
-  text-align: center;
-  margin-top: 20px;
-  color: #666;
-  
-  a {
-    color: #667eea;
-    text-decoration: none;
-    
-    &:hover {
-      text-decoration: underline;
-    }
-  }
-`;
-
-function LoginPage({ onLoginSuccess }) {
-  const [phone, setPhone] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
-  const [selectedCountry, setSelectedCountry] = useState(countryCode[0]);
-  const [showCountryDropDown, setShowCountryDropDown] = useState(false);
   const wrapperRef = useRef();
 
+  const getFlagEmoji = (countryCode) => {
+    return countryCode
+      .toUpperCase()
+      .split('')
+      .map((char) => String.fromCodePoint(0x1f1e6 - 65 + char.charCodeAt(0)))
+      .join('');
+  };
+
+  // 表单处理函数
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const selectCountry = (country) => {
+    setFormData(prev => ({ ...prev, countryCode: country.code }));
+    setUiState(prev => ({ ...prev, showCountryDropdown: false }));
+  };
+
+  // 验证函数
+  const validatePhone = (phone) => /^[0-9]{8,15}$/.test(phone);
+  const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const validatePassword = (password) => password.length >= 8;
+
+  // 倒计时效果
+  useEffect(() => {
+    if (uiState.countdown > 0) {
+      const timer = setTimeout(() => 
+        setUiState(prev => ({ ...prev, countdown: prev.countdown - 1 })), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [uiState.countdown]);
+
+  // 点击外部关闭国家选择下拉
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
-        setShowCountryDropDown(false);
+        setUiState(prev => ({ ...prev, showCountryDropdown: false }));
       }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const validatePhone = (phone) => {
-    const regex = /^[0-9]{8,15}$/; // 调整为不包含区号验证
-    return regex.test(phone);
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    
-    if (!phone.trim()) {
-      setError('Please enter your phone number');
-      return;
-    }
-    
-    if (!validatePhone(phone)) {
-      setError('Please enter a valid phone number');
-      return;
-    }
-
-    const fullPhoneNumber = `${selectedCountry.code}${phone}`;
-    console.log('Full Phone Number:', fullPhoneNumber);
-    
-    if (!password.trim()) {
-      setError('Please enter your password');
-      return;
-    }
-    
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters');
-      return;
-    }
+  // 发送验证码
+  const sendVerificationCode = async () => {
+    setUiState(prev => ({ ...prev, error: '', isLoading: true }));
     
     try {
-      setIsLoading(true);
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      onLoginSuccess();
+      if (step === REGISTER_STEPS.PHONE_VERIFICATION) {
+        if (!validatePhone(formData.phone)) {
+          throw new Error('Please enter a valid phone number');
+        }
+        
+        // 生成随机6位验证码并输出到控制台
+        const phoneCode = Math.floor(100000 + Math.random() * 900000).toString();
+        setCodes(prev => ({ ...prev, phoneCode }));
+        console.log('Phone verification code (for development):', phoneCode);
+        
+        setUiState(prev => ({
+          ...prev,
+          isLoading: false,
+          countdown: 60,
+          success: `Verification code sent to console (development mode)`
+        }));
+      } else {
+        if (!validateEmail(formData.email)) {
+          throw new Error('Please enter a valid email address');
+        }
+        
+        // 实际API调用发送邮箱验证码
+        const response = await API.sendEmailCode(formData.email);
+        setCodes(prev => ({ ...prev, emailCode: response.data.code }));
+        
+        setUiState(prev => ({
+          ...prev,
+          isLoading: false,
+          countdown: 60,
+          success: `Verification code sent to your email`
+        }));
+      }
     } catch (err) {
-      setError('Invalid phone number or password');
-    } finally {
-      setIsLoading(false);
+      setUiState(prev => ({
+        ...prev,
+        isLoading: false,
+        error: err.response?.data?.message || err.message || 'Failed to send verification code'
+      }));
+    }
+  };
+
+  // 验证验证码
+  const verifyCode = async () => {
+    if (!formData.verificationCode) {
+      setUiState(prev => ({ ...prev, error: 'Please enter verification code' }));
+      return;
+    }
+
+    setUiState(prev => ({ ...prev, isLoading: true, error: '' }));
+    
+    try {
+      if (step === REGISTER_STEPS.PHONE_VERIFICATION) {
+        // 直接比较控制台输出的验证码
+        if (formData.verificationCode !== codes.phoneCode) {
+          throw new Error('Invalid verification code');
+        }
+      } else {
+        // 实际API验证邮箱验证码
+        const response = await API.verifyEmailCode(formData.email, formData.verificationCode);
+        if (!response.data.success) {
+          throw new Error('Invalid verification code');
+        }
+      }
+      
+      setUiState(prev => ({
+        ...prev,
+        isLoading: false,
+        success: 'Verification successful!'
+      }));
+      
+      // 进入下一步
+      if (step === REGISTER_STEPS.PHONE_VERIFICATION) {
+        setStep(REGISTER_STEPS.EMAIL_VERIFICATION);
+      } else if (step === REGISTER_STEPS.EMAIL_VERIFICATION) {
+        setStep(REGISTER_STEPS.HUMAN_VERIFICATION);
+      }
+      
+      // 清空验证码输入
+      setFormData(prev => ({ ...prev, verificationCode: '' }));
+    } catch (err) {
+      setUiState(prev => ({
+        ...prev,
+        isLoading: false,
+        error: err.message || 'Invalid verification code'
+      }));
+    }
+  };
+
+  // 滑块验证完成
+  const handleSliderChange = (value) => {
+    setSliderValue(value);
+    if (value === 100) {
+      setUiState(prev => ({ ...prev, success: 'Verification complete! Please set your password.' }));
+      setTimeout(() => setStep(REGISTER_STEPS.PASSWORD_SETUP), 500);
+    }
+  };
+
+  // 提交注册
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!validatePassword(formData.password)) {
+      setUiState(prev => ({ ...prev, error: 'Password must be at least 8 characters' }));
+      return;
+    }
+    
+    if (formData.password !== formData.confirmPassword) {
+      setUiState(prev => ({ ...prev, error: 'Passwords do not match' }));
+      return;
+    }
+
+    setUiState(prev => ({ ...prev, isLoading: true, error: '' }));
+    
+    try {
+      // 准备注册数据
+      const registrationData = {
+        phone: formData.phone,
+        countryCode: formData.countryCode,
+        email: formData.email,
+        password: formData.password
+      };
+      
+      // 实际API调用
+      await API.register(registrationData);
+      
+      setUiState(prev => ({
+        ...prev,
+        isLoading: false,
+        success: 'Registration successful! Redirecting...'
+      }));
+      
+      // 3秒后跳转到登录页面
+      setTimeout(() => navigate('/login'), 3000);
+    } catch (err) {
+      setUiState(prev => ({
+        ...prev,
+        isLoading: false,
+        error: err.response?.data?.message || 'Registration failed. Please try again.'
+      }));
+    }
+  };
+
+  // 渲染当前步骤的表单
+  const renderCurrentStep = () => {
+    switch (step) {
+      case REGISTER_STEPS.PHONE_VERIFICATION:
+        return (
+          <>
+            <FormGroup>
+              <label>Phone Number</label>
+              <PhoneInputContainer>
+                <CountrySelectWrapper ref={wrapperRef}>
+                  <button 
+                    onClick={() => setUiState(prev => ({ ...prev, showCountryDropdown: !prev.showCountryDropdown }))}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      padding: '15px',
+                      border: '2px solid #eee',
+                      borderRadius: '8px',
+                      background: 'white',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <span>
+                      {getFlagEmoji(formData.countryCode)} {formData.countryCode}
+                    </span>
+                    <FaChevronDown style={{ marginLeft: '5px' }} />
+                  </button>
+                  
+                  {uiState.showCountryDropdown && (
+                    <CountryDropdown>
+                      {countryCode.map((country) => (
+                        <CountryOption
+                          key={country.code}
+                          onClick={() => selectCountry(country)}
+                        >
+                          {getFlagEmoji(country.flag)} {country.name} {country.code}
+                        </CountryOption>
+                      ))}
+                    </CountryDropdown>
+                  )}
+                </CountrySelectWrapper>
+                
+                <Input
+                  type="tel"
+                  name="phone"
+                  placeholder="Phone number"
+                  value={formData.phone}
+                  onChange={handleInputChange}
+                  style={{ paddingLeft: '15px' }}
+                />
+              </PhoneInputContainer>
+            </FormGroup>
+            
+            <FormGroup>
+              <label>Verification Code</label>
+              <VerificationCodeContainer>
+                <InputContainer>
+                  <InputIcon><FaPhone /></InputIcon>
+                  <Input
+                    type="text"
+                    name="verificationCode"
+                    placeholder="Enter 6-digit code"
+                    value={formData.verificationCode}
+                    onChange={handleInputChange}
+                    maxLength="6"
+                  />
+                </InputContainer>
+                <VerificationCodeButton
+                  onClick={sendVerificationCode}
+                  disabled={uiState.countdown > 0 || !formData.phone || uiState.isLoading}
+                >
+                  {uiState.countdown > 0 ? `${uiState.countdown}s` : 'Get Code'}
+                </VerificationCodeButton>
+              </VerificationCodeContainer>
+            </FormGroup>
+            
+            <Button 
+              onClick={verifyCode}
+              disabled={!formData.verificationCode || uiState.isLoading}
+            >
+              {uiState.isLoading ? <FaSpinner style={{ animation: 'spin 1s linear infinite' }} /> : 'Next'}
+            </Button>
+          </>
+        );
+      
+      case REGISTER_STEPS.EMAIL_VERIFICATION:
+        return (
+          <>
+            <FormGroup>
+              <label>Email Address</label>
+              <InputContainer>
+                <InputIcon><FaEnvelope /></InputIcon>
+                <Input
+                  type="email"
+                  name="email"
+                  placeholder="Your email"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                />
+              </InputContainer>
+            </FormGroup>
+            
+            <FormGroup>
+              <label>Verification Code</label>
+              <VerificationCodeContainer>
+                <InputContainer>
+                  <InputIcon><FaEnvelope /></InputIcon>
+                  <Input
+                    type="text"
+                    name="verificationCode"
+                    placeholder="Enter 6-digit code"
+                    value={formData.verificationCode}
+                    onChange={handleInputChange}
+                    maxLength="6"
+                  />
+                </InputContainer>
+                <VerificationCodeButton
+                  onClick={sendVerificationCode}
+                  disabled={uiState.countdown > 0 || !formData.email || uiState.isLoading}
+                >
+                  {uiState.countdown > 0 ? `${uiState.countdown}s` : 'Get Code'}
+                </VerificationCodeButton>
+              </VerificationCodeContainer>
+            </FormGroup>
+            
+            <Button 
+              onClick={verifyCode}
+              disabled={!formData.verificationCode || uiState.isLoading}
+            >
+              {uiState.isLoading ? <FaSpinner style={{ animation: 'spin 1s linear infinite' }} /> : 'Next'}
+            </Button>
+          </>
+        );
+      
+      case REGISTER_STEPS.HUMAN_VERIFICATION:
+        return (
+          <>
+            <SliderContainer>
+              <div style={{ marginBottom: '15px', color: '#666' }}>
+                Slide to verify you're human
+                {sliderValue === 100 && <Checkmark><FaCheck size={12} /></Checkmark>}
+              </div>
+              <Slider
+                value={sliderValue}
+                onChange={handleSliderChange}
+                railStyle={{ backgroundColor: '#eee', height: 8 }}
+                trackStyle={{ backgroundColor: '#667eea', height: 8 }}
+                handleStyle={{
+                  borderColor: '#667eea',
+                  height: 24,
+                  width: 24,
+                  marginTop: -8,
+                  backgroundColor: '#fff',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                }}
+                disabled={sliderValue === 100}
+              />
+            </SliderContainer>
+          </>
+        );
+      
+      case REGISTER_STEPS.PASSWORD_SETUP:
+        return (
+          <form onSubmit={handleSubmit}>
+            <FormGroup>
+              <label>Password</label>
+              <InputContainer>
+                <InputIcon><FaLock /></InputIcon>
+                <Input
+                  type="password"
+                  name="password"
+                  placeholder="At least 8 characters"
+                  value={formData.password}
+                  onChange={handleInputChange}
+                />
+              </InputContainer>
+            </FormGroup>
+            
+            <FormGroup>
+              <label>Confirm Password</label>
+              <InputContainer>
+                <InputIcon><FaLock /></InputIcon>
+                <Input
+                  type="password"
+                  name="confirmPassword"
+                  placeholder="Confirm your password"
+                  value={formData.confirmPassword}
+                  onChange={handleInputChange}
+                />
+              </InputContainer>
+            </FormGroup>
+            
+            <Button type="submit" disabled={uiState.isLoading}>
+              {uiState.isLoading ? (
+                <>
+                  <FaSpinner style={{ animation: 'spin 1s linear infinite', marginRight: '8px' }} /> 
+                  Registering...
+                </>
+              ) : 'Complete Registration'}
+            </Button>
+          </form>
+        );
+      
+      default:
+        return null;
     }
   };
 
   return (
-    <Container>
-      <LoginCard>
-        <Title>Welcome Back</Title>
-        
-        <form onSubmit={handleSubmit}>
-          <FormGroup>
-            <PhoneInputContainer>
-              <CountrySelect ref={wrapperRef}>
-                <SelectedCountry onClick={() => setShowCountryDropDown(!showCountryDropDown)}>
-                  {selectedCountry.flag} {selectedCountry.code}
-                  <FaChevronDown style={{ marginLeft: '5px' }} />
-                </SelectedCountry>
-                {showCountryDropDown && (
-                  <CountryDropDown>
-                    {countryCode.map((country) => (
-                      <CountryOption
-                        key={country.code}
-                        onClick={() => {
-                          setSelectedCountry(country);
-                          setShowCountryDropDown(false);
-                        }}
-                      >
-                        {getFlagEmoji(country.flag)} {country.name} {country.code}
-                      </CountryOption>
-                    ))}
-                  </CountryDropDown>
-                )}
-              </CountrySelect>
-              <PhoneNumberInput
-                type="tel" 
-                placeholder="Phone number" 
-                value={phone} 
-                onChange={(e) => setPhone(e.target.value)}
-              />
-             </PhoneInputContainer>
-          </FormGroup>
-          
-          <FormGroup>
-            <Input 
-              type="password" 
-              placeholder="Password" 
-              value={password} 
-              onChange={(e) => setPassword(e.target.value)}
-            />
-            {error && <ErrorMessage>{error}</ErrorMessage>}
-          </FormGroup>
+    <>
+      <GlobalBanner>
+        Let's create something interesting.
+      </GlobalBanner>
 
-          <Button type="submit" disabled={isLoading}>
-            {isLoading ? <LoadingSpinner /> : 'Login'}
-          </Button>
+      <Container>
+        <RegisterCard>
+          <Title>Create Your Account</Title>
           
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-              <input 
-                type="checkbox" 
-                checked={rememberMe} 
-                onChange={(e) => setRememberMe(e.target.checked)}
-                style={{ marginRight: '8px' }}
-              />
-              Remember me
-            </label>
-            
-            <ForgotPassword href="#">Forgot password?</ForgotPassword>
+          {uiState.error && <ErrorMessage>{uiState.error}</ErrorMessage>}
+          {uiState.success && !uiState.error && <SuccessMessage>{uiState.success}</SuccessMessage>}
+          
+          {renderCurrentStep()}
+          
+          <div style={{ textAlign: 'center', marginTop: '20px' }}>
+            Already have an account? <Link to="/login" style={{ color: '#667eea' }}>Sign in</Link>
           </div>
-          
-          {error && <ErrorMessage>{error}</ErrorMessage>}
-          
-          <Button type="submit" disabled={isLoading}>
-            {isLoading ? (
-              <>
-                <LoadingSpinner /> Logging in...
-              </>
-            ) : 'Login'}
-          </Button>
-        </form>
-        
-        <Divider><span>OR</span></Divider>
-        
-        <SocialButton>
-          <GoogleIcon />
-          Continue with Google
-        </SocialButton>
-        
-        <SocialButton>
-          <FacebookIcon />
-          Continue with Facebook
-        </SocialButton>
-        
-        <SignUpText>
-          Don't have an account? <a href="#">Sign up</a>
-        </SignUpText>
-      </LoginCard>
-    </Container>
+        </RegisterCard>
+      </Container>
+    </>
   );
 }
 
-export default LoginPage;
+export default SignUpPage;

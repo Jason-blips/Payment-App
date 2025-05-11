@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+// 添加这行导入：
+import { Link } from 'react-router-dom';
 import styled, { keyframes } from 'styled-components';
 import { FaUser, FaLock, FaSpinner } from 'react-icons/fa';
 
@@ -7,6 +9,23 @@ const fadeIn = keyframes`
   from { opacity: 0; transform: translateY(-20px); }
   to { opacity: 1; transform: translateY(0); }
 `;
+
+// 全局标语样式
+const GlobalBanner = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 15px;
+  text-align: center;
+  font-size: 20px;
+  font-weight: bold;
+  z-index: 1000;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+`;
+
 
 // 样式组件
 const Container = styled.div`
@@ -231,68 +250,74 @@ function LoginPage({ onLoginSuccess }) {
   };
 
   return (
-    <Container>
-      <LoginCard>
-        <Title>Welcome to GitHack</Title>
+    <>
+      <GlobalBanner>
+        Let's create something interesting.
+      </GlobalBanner>
 
-        <form onSubmit={handleSubmit}>
-          <FormGroup>
-            <Icon><FaUser /></Icon>
-            <Input
-              type="text"
-              placeholder="Username"
-              value={username}
-              onChange={e => setUsername(e.target.value)}
-            />
-          </FormGroup>
+      <Container>
+        <LoginCard>
+          <Title>Welcome to GitHack</Title>
 
-          <FormGroup>
-            <Icon><FaLock /></Icon>
-            <Input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-            />
-          </FormGroup>
-
-          {error && <ErrorMessage>{error}</ErrorMessage>}
-
-          <Button type="submit" disabled={isLoading}>
-            {isLoading ? (<><LoadingSpinner /> Logging in...</>) : 'Login'}
-          </Button>
-
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                checked={rememberMe}
-                onChange={e => setRememberMe(e.target.checked)}
-                style={{ marginRight: '8px' }}
+          <form onSubmit={handleSubmit}>
+            <FormGroup>
+              <Icon><FaUser /></Icon>
+              <Input
+                type="text"
+                placeholder="Username"
+                value={username}
+                onChange={e => setUsername(e.target.value)}
               />
-              Remember me
-            </label>
-            <ForgotPassword href="#">Forgot password?</ForgotPassword>
-          </div>
-        </form>
+            </FormGroup>
 
-        <Divider><span>OR</span></Divider>
+            <FormGroup>
+              <Icon><FaLock /></Icon>
+              <Input
+                type="password"
+                placeholder="Password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+              />
+            </FormGroup>
 
-        <SocialButton>
-          <GoogleIcon />
-          Continue with Google
-        </SocialButton>
+            {error && <ErrorMessage>{error}</ErrorMessage>}
 
-        <SocialButton>
-          <FacebookIcon />
-          Continue with Facebook
-        </SocialButton>
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? (<><LoadingSpinner /> Logging in...</>) : 'Login'}
+            </Button>
 
-        <SignUpText>
-          Don’t have an account? <a href="#">Sign up</a>
-        </SignUpText>
-      </LoginCard>
-    </Container>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={e => setRememberMe(e.target.checked)}
+                  style={{ marginRight: '8px' }}
+                />
+                Remember me
+              </label>
+              <ForgotPassword href="#">Forgot password?</ForgotPassword>
+            </div>
+          </form>
+
+          <Divider><span>OR</span></Divider>
+
+          <SocialButton>
+            <GoogleIcon />
+            Continue with Google
+          </SocialButton>
+
+          <SocialButton>
+            <FacebookIcon />
+            Continue with Facebook
+          </SocialButton>
+
+          <SignUpText>
+            Don’t have an account? <Link to="/signup">Sign up</Link>
+          </SignUpText>
+        </LoginCard>
+      </Container>
+    </>  
   );
 }
 
